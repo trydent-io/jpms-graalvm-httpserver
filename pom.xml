@@ -16,11 +16,12 @@
   </properties>
 
   <build>
+    <finalName>httpserver</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.10.1</version>
+        <version>3.11.0</version>
         <executions>
           <!-- Replacing default-compile as it is treated specially by Maven -->
           <execution>
@@ -53,9 +54,39 @@
             <arg>-Xpkginfo:always</arg>
             <!--              <arg>-Xlint:preview</arg>-->
           </compilerArgs>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
-          <release>${maven.compiler.release}</release>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jlink-plugin</artifactId>
+        <version>3.1.0</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>package</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jlink</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <verbose>true</verbose>
+          <includeLocales>
+            <locale>it</locale>
+          </includeLocales>
+          <noHeaderFiles>true</noHeaderFiles>
+          <stripDebug>true</stripDebug>
+          <noManPages>true</noManPages>
+          <modulePaths>
+            <modulePath>${java.home}/jmods</modulePath>
+          </modulePaths>
+          <addOptions>
+            <option>--compress=zip9</option>
+            <option>-Dfile.encoding=UTF-8</option>
+          </addOptions>
+          <classifier>dist-${os.arch}</classifier>
+          <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
         </configuration>
       </plugin>
     </plugins>
