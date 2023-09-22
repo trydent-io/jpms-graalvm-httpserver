@@ -82,8 +82,7 @@
             <modulePath>${java.home}/jmods</modulePath>
           </modulePaths>
           <addOptions>
-            <option>--compress=zip9</option>
-            <option>-Dfile.encoding=UTF-8</option>
+            <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
           <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
