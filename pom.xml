@@ -82,10 +82,39 @@
             <modulePath>${java.home}/jmods</modulePath>
           </modulePaths>
           <addOptions>
-            <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
+            <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"
+            </addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
           <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.graalvm.buildtools</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <version>0.9.23</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>build-native</id>
+            <goals>
+              <goal>compile-no-fork</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+          <execution>
+            <id>test-native</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <phase>test</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <imageName>${project.build.finalName}</imageName>
+          <mainClass>io.trydent.httpserver.Main</mainClass>
+          <buildArgs>--enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime --allow-incomplete-classpath
+          </buildArgs>
         </configuration>
       </plugin>
     </plugins>
