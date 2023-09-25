@@ -1,7 +1,5 @@
 package io.trydent.httpserver;
 
-import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpHandlers;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.SimpleFileServer;
 
@@ -18,8 +16,7 @@ interface Main {
     try {
       var httpServer = HttpServer.create(new InetSocketAddress(8080), Integer.MAX_VALUE);
       httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
-      System.out.println(Main.class.getClassLoader().getResource("web/index.html").toExternalForm());
-      httpServer.createContext("/", SimpleFileServer.createFileHandler(Path.of(requireNonNull(Main.class.getClassLoader().getResource("web")).toURI())));
+      httpServer.createContext("/", SimpleFileServer.createFileHandler(Path.of(requireNonNull(Main.class.getResource("/web")).toURI())));
       httpServer.start();
       System.out.println("Http Server started on port 8080");
     } catch (IOException | URISyntaxException e) {

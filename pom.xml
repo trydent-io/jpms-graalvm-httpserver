@@ -99,7 +99,7 @@
             <goals>
               <goal>compile-no-fork</goal>
             </goals>
-            <phase>none</phase>
+            <phase>package</phase>
           </execution>
           <execution>
             <id>test-native</id>
