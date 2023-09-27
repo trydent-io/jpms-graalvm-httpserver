@@ -85,7 +85,7 @@
             <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
-          <launcher>httpserver=httpserver/com.acme.httpserver.Main</launcher>
+          <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
         </configuration>
       </plugin>
       <plugin>
@@ -110,10 +110,9 @@
           </execution>
         </executions>
         <configuration>
-          <resourceIncludedPatterns>web/index.html</resourceIncludedPatterns>
+          <buildArgs>--enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=^.*web/.*$</buildArgs>
           <imageName>${project.build.finalName}</imageName>
-          <mainClass>com.acme.httpserver.Main</mainClass>
-          <buildArgs>--enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime --allow-incomplete-classpath</buildArgs>
+          <mainClass>io.trydent.httpserver.Main</mainClass>
         </configuration>
       </plugin>
     </plugins>
