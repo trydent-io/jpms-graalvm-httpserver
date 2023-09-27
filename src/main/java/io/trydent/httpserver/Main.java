@@ -16,7 +16,6 @@ class Main {
     try {
       var httpServer = HttpServer.create(new InetSocketAddress(8080), Integer.MAX_VALUE);
       var resource = Main.class.getClassLoader().getResource("web/index.html");
-      System.out.println(new String(resource.openStream().readAllBytes()));
       var path = Path.of(Main.class.getClassLoader().getResource("web/index.html").toURI());
       System.out.println(path.toUri());
       httpServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
