@@ -110,7 +110,7 @@
           </execution>
         </executions>
         <configuration>
-          <buildArgs>--enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=^.*web/.*$</buildArgs>
+          <buildArgs>-H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*web/.*$</buildArgs>
           <imageName>${project.build.finalName}</imageName>
           <mainClass>io.trydent.httpserver.Main</mainClass>
         </configuration>
