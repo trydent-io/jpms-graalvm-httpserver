@@ -15,6 +15,29 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.shredzone.acme4j</groupId>
+      <artifactId>acme4j-client</artifactId>
+      <version>2.16</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.75</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <version>1.75</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcutil-jdk18on</artifactId>
+      <version>1.75</version>
+    </dependency>
+  </dependencies>
+
   <build>
     <finalName>httpserver</finalName>
     <plugins>
@@ -82,7 +105,9 @@
             <modulePath>${java.home}/jmods</modulePath>
           </modulePaths>
           <addOptions>
-            <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
+            <addOption>"-XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC
+              -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"
+            </addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
           <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
@@ -110,7 +135,9 @@
           </execution>
         </executions>
         <configuration>
-          <buildArgs>-H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*web/.*$</buildArgs>
+          <buildArgs>-H:+UnlockExperimentalVMOptions --enable-all-security-services
+            -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*web/.*$
+          </buildArgs>
           <imageName>${project.build.finalName}</imageName>
           <mainClass>io.trydent.httpserver.Main</mainClass>
         </configuration>
