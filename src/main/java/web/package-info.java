@@ -1,2 +1,0 @@
-// placeholder
-package web;
