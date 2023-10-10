@@ -1,5 +1,6 @@
 package io.trydent.httpserver;
 
+import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
 import com.sun.net.httpserver.SimpleFileServer;
@@ -46,7 +47,7 @@ enum Main {
       final var parsedPem = pemParser.readObject();
 
       if (parsedPem instanceof PEMKeyPair keyPair) {
-        final var privateKey = new JcaPEMKeyConverter().getPrivateKey(keyPair.getPrivateKeyInfo());
+        final var privateKey = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey(keyPair.getPrivateKeyInfo());
         return privateKey instanceof ECPrivateKey it ? Optional.of(it) : Optional.empty();
       }
     }
@@ -62,7 +63,7 @@ enum Main {
       final var parsedCrt = crtParser.readObject();
 
       if (parsedCrt instanceof X509CertificateHolder holder) {
-        return Optional.ofNullable(new JcaX509CertificateConverter().getCertificate(holder));
+        return Optional.ofNullable(new JcaX509CertificateConverter().setProvider("BC").getCertificate(holder));
       }
     }
 
@@ -93,16 +94,22 @@ enum Main {
     final var tls = SSLContext.getInstance("TLSv1.3");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
-    var httpsServer = HttpsServer.create(new InetSocketAddress(8443), Integer.MAX_VALUE);
     var indexResource = Main.class.getClassLoader().getResource(Instance.indexHtml);
     var path = Path.of(requireNonNull(indexResource).toURI());
+
+    var httpServer = HttpServer.create(new InetSocketAddress(80), Integer.MAX_VALUE);
+    httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+    httpServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
+    httpServer.start();
+    System.out.println("Http Server started on port 80");
+
+    var httpsServer = HttpsServer.create(new InetSocketAddress(443), Integer.MAX_VALUE);
     System.out.println(path.toUri());
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls));
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
     httpsServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
     httpsServer.start();
-    System.out.println("Http Server started on port 8443");
-
+    System.out.println("Https Server started on port 443");
   }
 
   public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException {
