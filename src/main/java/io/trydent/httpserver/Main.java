@@ -1,9 +1,6 @@
 package io.trydent.httpserver;
 
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpsConfigurator;
-import com.sun.net.httpserver.HttpsServer;
-import com.sun.net.httpserver.SimpleFileServer;
+import com.sun.net.httpserver.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -97,15 +94,25 @@ enum Main {
     var indexResource = Main.class.getClassLoader().getResource(Instance.indexHtml);
     var path = Path.of(requireNonNull(indexResource).toURI());
 
-    var httpServer = HttpServer.create(new InetSocketAddress(80), Integer.MAX_VALUE);
+    var httpServer = HttpServer.create(new InetSocketAddress(8080), Integer.MAX_VALUE);
     httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
     httpServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
     httpServer.start();
     System.out.println("Http Server started on port 80");
 
-    var httpsServer = HttpsServer.create(new InetSocketAddress(443), Integer.MAX_VALUE);
+    var httpsServer = HttpsServer.create(new InetSocketAddress(8443), Integer.MAX_VALUE);
     System.out.println(path.toUri());
-    httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls));
+    httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
+      @Override
+      public void configure(HttpsParameters params) {
+        var sslContext = tls; // getSSLContext();
+        var sslEngine = sslContext.createSSLEngine();
+        params.setNeedClientAuth(false);
+        params.setCipherSuites(sslEngine.getEnabledCipherSuites());
+        params.setProtocols(sslEngine.getEnabledProtocols());
+        params.setSSLParameters(sslContext.getDefaultSSLParameters());
+      }
+    });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
     httpsServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
     httpsServer.start();
