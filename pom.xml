@@ -134,7 +134,7 @@
           </execution>
         </executions>
         <configuration>
-          <buildArgs>-H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*web/.*$</buildArgs>
+          <buildArgs>--enable-preview -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
           <imageName>${project.build.finalName}</imageName>
           <mainClass>io.trydent.httpserver.Main</mainClass>
         </configuration>

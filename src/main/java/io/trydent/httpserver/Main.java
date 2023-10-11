@@ -19,10 +19,17 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPrivateKey;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 
+import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
+import static java.lang.System.out;
 import static java.util.Objects.requireNonNull;
 
 enum Main {
@@ -51,7 +58,7 @@ enum Main {
     return Optional.empty();
   }
 
-  public Optional<Certificate> caCertificate() throws IOException, CertificateException {
+  public Optional<X509Certificate> caCertificate() throws IOException, CertificateException {
     try (
       final var crtResource = Main.class.getClassLoader().getResourceAsStream(Instance.domainCrt);
       final var inputReader = new InputStreamReader(requireNonNull(crtResource));
@@ -91,35 +98,61 @@ enum Main {
     final var tls = SSLContext.getInstance("TLSv1.3");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
+    SSLContext.setDefault(tls);
+
     var indexResource = Main.class.getClassLoader().getResource(Instance.indexHtml);
     var path = Path.of(requireNonNull(indexResource).toURI());
 
-    var httpServer = HttpServer.create(new InetSocketAddress(8080), Integer.MAX_VALUE);
+    var httpServer = HttpServer.create(
+      new InetSocketAddress(80),
+      10,
+      "/",
+      exchange -> HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
+      CONSOLE_LOG
+    );
     httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
-    httpServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
     httpServer.start();
-    System.out.println("Http Server started on port 80");
 
-    var httpsServer = HttpsServer.create(new InetSocketAddress(8443), Integer.MAX_VALUE);
-    System.out.println(path.toUri());
+    var fileHandler = SimpleFileServer.createFileHandler(path.getParent());
+    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", exchange -> HttpHandlers.of(200, Headers.of(Map.of("context-typ", List.of("text/plain"))), "Hello world").handle(exchange), CONSOLE_LOG);
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
-        var sslContext = tls; // getSSLContext();
-        var sslEngine = sslContext.createSSLEngine();
-        params.setNeedClientAuth(false);
-        params.setCipherSuites(sslEngine.getEnabledCipherSuites());
-        params.setProtocols(sslEngine.getEnabledProtocols());
-        params.setSSLParameters(sslContext.getDefaultSSLParameters());
+        try {
+          var sslContext = SSLContext.getDefault();
+          var sslEngine = sslContext.createSSLEngine();
+          params.setNeedClientAuth(false);
+          params.setCipherSuites(sslEngine.getEnabledCipherSuites());
+          params.setProtocols(sslEngine.getEnabledProtocols());
+          params.setSSLParameters(sslContext.getDefaultSSLParameters());
+
+        } catch (NoSuchAlgorithmException e) {
+          throw new RuntimeException(e);
+        }
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
-    httpsServer.createContext("/", SimpleFileServer.createFileHandler(path.getParent()));
     httpsServer.start();
     System.out.println("Https Server started on port 443");
   }
 
   public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException {
     Instance.setup();
+  }
+}
+
+final class ConsoleLog extends Filter {
+  static final ConsoleLog CONSOLE_LOG = new ConsoleLog();
+  private static final DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+  @Override
+  public void doFilter(HttpExchange exchange, Chain chain) throws IOException {
+    out.printf("[%s] %s %s %s%n", LocalDateTime.now().format(format), exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRemoteAddress());
+    chain.doFilter(exchange);
+  }
+
+  @Override
+  public String description() {
+    return "console-log";
   }
 }
