@@ -42,6 +42,10 @@ enum Main {
   private final String domainCrt = STR. "\{ path }cert/domain.alpenflow.io.crt" ;
   private final String domainCsr = STR. "\{ path }cert/domain.alpenflow.io.csr" ;
 
+  public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException {
+    Instance.setup();
+  }
+
   public Optional<ECPrivateKey> privateKey() throws IOException {
     try (
       final var pemResource = Main.class.getClassLoader().getResourceAsStream(Instance.domainPem);
@@ -95,7 +99,7 @@ enum Main {
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(clientKeyStore, "password".toCharArray());
 
-    final var tls = SSLContext.getInstance("TLSv1.3");
+    final var tls = SSLContext.getInstance("TLSv1.2");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
     SSLContext.setDefault(tls);
@@ -104,17 +108,17 @@ enum Main {
     var path = Path.of(requireNonNull(indexResource).toURI());
 
     var httpServer = HttpServer.create(
-      new InetSocketAddress(80),
+      new InetSocketAddress(8080),
       10,
       "/",
-      exchange -> HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
+      exchange -> HttpHandlers.of(200, Headers.of(Map.of("Context-Type", List.of("text/plain"))), "Hello world").handle(exchange), // HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
       CONSOLE_LOG
     );
     httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
     httpServer.start();
 
     var fileHandler = SimpleFileServer.createFileHandler(path.getParent());
-    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", exchange -> HttpHandlers.of(200, Headers.of(Map.of("context-typ", List.of("text/plain"))), "Hello world").handle(exchange), CONSOLE_LOG);
+    var httpsServer = HttpsServer.create(new InetSocketAddress(8443), 10, "/", exchange -> HttpHandlers.of(200, Headers.of(Map.of("Context-Type", List.of("text/plain"))), "Hello world").handle(exchange), CONSOLE_LOG);
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
@@ -135,10 +139,6 @@ enum Main {
     httpsServer.start();
     System.out.println("Https Server started on port 443");
   }
-
-  public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException {
-    Instance.setup();
-  }
 }
 
 final class ConsoleLog extends Filter {
@@ -147,7 +147,7 @@ final class ConsoleLog extends Filter {
 
   @Override
   public void doFilter(HttpExchange exchange, Chain chain) throws IOException {
-    out.printf("[%s] %s %s %s%n", LocalDateTime.now().format(format), exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRemoteAddress());
+    out.println(STR. "[\{ LocalDateTime.now().format(format) }] \{ exchange.getRequestMethod() } \{ exchange.getRequestURI() } \{ exchange.getRemoteAddress() }" );
     chain.doFilter(exchange);
   }
 
