@@ -6,6 +6,7 @@ target/
 *.pem
 *.crt
 *.csr
+*.key
 
 ### IntelliJ IDEA ###
 .idea/modules.xml

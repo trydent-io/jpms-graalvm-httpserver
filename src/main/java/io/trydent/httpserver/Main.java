@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPrivateKey;
 import java.time.LocalDateTime;
@@ -37,18 +38,21 @@ enum Main {
 
   private final String path = "io/trydent/httpserver/";
   private final String indexHtml = STR. "\{ path }web/index.html" ;
+  private final String caBundle = STR. "\{ path }cert/ca_bundle.crt" ;
+  private final String certificate = STR. "\{ path }cert/certificate.crt" ;
+  private final String privateKey = STR. "\{ path }cert/private.key" ;
   private final String accountPem = STR. "\{ path }cert/account.alpenflow.io.pem" ;
   private final String domainPem = STR. "\{ path }cert/domain.alpenflow.io.pem" ;
   private final String domainCrt = STR. "\{ path }cert/domain.alpenflow.io.crt" ;
   private final String domainCsr = STR. "\{ path }cert/domain.alpenflow.io.csr" ;
 
-  public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException {
+  public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException, NoSuchProviderException {
     Instance.setup();
   }
 
-  public Optional<ECPrivateKey> privateKey() throws IOException {
+  public Optional<PrivateKey> privateKey() throws IOException {
     try (
-      final var pemResource = Main.class.getClassLoader().getResourceAsStream(Instance.domainPem);
+      final var pemResource = Main.class.getClassLoader().getResourceAsStream(Instance.privateKey);
       final var inputReader = new InputStreamReader(requireNonNull(pemResource));
       final var pemParser = new PEMParser(inputReader)
     ) {
@@ -56,15 +60,39 @@ enum Main {
 
       if (parsedPem instanceof PEMKeyPair keyPair) {
         final var privateKey = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey(keyPair.getPrivateKeyInfo());
-        return privateKey instanceof ECPrivateKey it ? Optional.of(it) : Optional.empty();
+        return privateKey instanceof PrivateKey it ? Optional.of(it) : Optional.empty();
       }
     }
     return Optional.empty();
   }
 
+  public void caBundle() throws IOException, CertificateException, NoSuchProviderException {
+    try (final var caBundleResource = Main.class.getClassLoader().getResourceAsStream(Instance.caBundle)) {
+      var factory = CertificateFactory.getInstance("X.509", "BC");
+      while (requireNonNull(caBundleResource).available() > 0) {
+        var index = 0;
+        for (final var certificate : factory.generateCertificates(caBundleResource)) {
+          out.println(STR."Certificate Bundle \{index}");
+        }
+      }
+    }
+  }
+
+  public void certificate() throws IOException, CertificateException, NoSuchProviderException {
+    try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(Instance.certificate)) {
+      var factory = CertificateFactory.getInstance("X.509", "BC");
+      while (requireNonNull(certificateResource).available() > 0) {
+        var index = 0;
+        for (final var certificate : factory.generateCertificates(certificateResource)) {
+          out.println(STR."Certificate \{index}");
+        }
+      }
+    }
+  }
+
   public Optional<X509Certificate> caCertificate() throws IOException, CertificateException {
     try (
-      final var crtResource = Main.class.getClassLoader().getResourceAsStream(Instance.domainCrt);
+      final var crtResource = Main.class.getClassLoader().getResourceAsStream(Instance.certificate);
       final var inputReader = new InputStreamReader(requireNonNull(crtResource));
       final var crtParser = new PEMParser(inputReader)
     ) {
@@ -78,9 +106,11 @@ enum Main {
     return Optional.empty();
   }
 
-  public void setup() throws IOException, URISyntaxException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException {
+  public void setup() throws IOException, URISyntaxException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, NoSuchProviderException {
     Security.insertProviderAt(new BouncyCastleProvider(), 1);
 
+    caBundle();
+    certificate();
     final var caCertificate = caCertificate().orElseThrow();
     final var privateKey = privateKey().orElseThrow();
 
@@ -99,7 +129,7 @@ enum Main {
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(clientKeyStore, "password".toCharArray());
 
-    final var tls = SSLContext.getInstance("TLSv1.2");
+    final var tls = SSLContext.getInstance("TLS");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
     SSLContext.setDefault(tls);
@@ -108,7 +138,7 @@ enum Main {
     var path = Path.of(requireNonNull(indexResource).toURI());
 
     var httpServer = HttpServer.create(
-      new InetSocketAddress(8080),
+      new InetSocketAddress(80),
       10,
       "/",
       exchange -> HttpHandlers.of(200, Headers.of(Map.of("Context-Type", List.of("text/plain"))), "Hello world").handle(exchange), // HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
@@ -118,7 +148,7 @@ enum Main {
     httpServer.start();
 
     var fileHandler = SimpleFileServer.createFileHandler(path.getParent());
-    var httpsServer = HttpsServer.create(new InetSocketAddress(8443), 10, "/", exchange -> HttpHandlers.of(200, Headers.of(Map.of("Context-Type", List.of("text/plain"))), "Hello world").handle(exchange), CONSOLE_LOG);
+    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", fileHandler, CONSOLE_LOG);
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
