@@ -21,7 +21,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.ECPrivateKey;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
+import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.util.Objects.requireNonNull;
 
@@ -67,7 +67,7 @@ enum Main {
   }
 
   public void caBundle() throws IOException, CertificateException, NoSuchProviderException {
-    try (final var caBundleResource = Main.class.getClassLoader().getResourceAsStream(Instance.caBundle)) {
+    try (final var caBundleResource = Main.class.getClassLoader().getResourceAsStream(Instance.certificate)) {
       var factory = CertificateFactory.getInstance("X.509", "BC");
       while (requireNonNull(caBundleResource).available() > 0) {
         var index = 0;
@@ -78,21 +78,23 @@ enum Main {
     }
   }
 
-  public void certificate() throws IOException, CertificateException, NoSuchProviderException {
-    try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(Instance.certificate)) {
+  public void certificates(String certificatePath) throws IOException, CertificateException, NoSuchProviderException {
+    try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(certificatePath)) {
       var factory = CertificateFactory.getInstance("X.509", "BC");
-      while (requireNonNull(certificateResource).available() > 0) {
+      var input = requireNonNull(certificateResource);
+      out.println(STR."Starting: \{input.available()}");
+      while (input.available() > 0) {
         var index = 0;
         for (final var certificate : factory.generateCertificates(certificateResource)) {
-          out.println(STR."Certificate \{index}");
+          out.println(STR."Certificate \{index++} remaining: \{input.available()}");
         }
       }
     }
   }
 
-  public Optional<X509Certificate> caCertificate() throws IOException, CertificateException {
+  public Optional<X509Certificate> caCertificate(String certificate) throws IOException, CertificateException {
     try (
-      final var crtResource = Main.class.getClassLoader().getResourceAsStream(Instance.certificate);
+      final var crtResource = Main.class.getClassLoader().getResourceAsStream(certificate);
       final var inputReader = new InputStreamReader(requireNonNull(crtResource));
       final var crtParser = new PEMParser(inputReader)
     ) {
@@ -108,15 +110,20 @@ enum Main {
 
   public void setup() throws IOException, URISyntaxException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, NoSuchProviderException {
     Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
+    System.setProperty("jdk.tls.server.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
 
-    caBundle();
-    certificate();
-    final var caCertificate = caCertificate().orElseThrow();
+
+    certificates(Instance.certificate);
+    certificates(Instance.caBundle);
+    final var caCertificate = caCertificate(Instance.certificate).orElseThrow();
+    final var caBundle = caCertificate(Instance.caBundle).orElseThrow();
     final var privateKey = privateKey().orElseThrow();
 
     final var caKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     caKeyStore.load(null, null);
     caKeyStore.setCertificateEntry("ca-certificate", caCertificate);
+    caKeyStore.setCertificateEntry("ca-certificate-bundle", caBundle);
 
     final var trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     trustManagerFactory.init(caKeyStore);
@@ -124,12 +131,13 @@ enum Main {
     final var clientKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     clientKeyStore.load(null, null);
     clientKeyStore.setCertificateEntry("certificate", caCertificate);
-    clientKeyStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate});
+    clientKeyStore.setCertificateEntry("ca-certificate-bundle", caBundle);
+    clientKeyStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(clientKeyStore, "password".toCharArray());
 
-    final var tls = SSLContext.getInstance("TLS");
+    final var tls = SSLContext.getInstance("TLSv1.3");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
 
     SSLContext.setDefault(tls);
@@ -141,7 +149,7 @@ enum Main {
       new InetSocketAddress(80),
       10,
       "/",
-      exchange -> HttpHandlers.of(200, Headers.of(Map.of("Context-Type", List.of("text/plain"))), "Hello world").handle(exchange), // HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
+      exchange -> HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
       CONSOLE_LOG
     );
     httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
@@ -156,6 +164,7 @@ enum Main {
           var sslContext = SSLContext.getDefault();
           var sslEngine = sslContext.createSSLEngine();
           params.setNeedClientAuth(false);
+          params.setWantClientAuth(false);
           params.setCipherSuites(sslEngine.getEnabledCipherSuites());
           params.setProtocols(sslEngine.getEnabledProtocols());
           params.setSSLParameters(sslContext.getDefaultSSLParameters());
