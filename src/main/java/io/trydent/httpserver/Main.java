@@ -8,9 +8,7 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -110,6 +108,8 @@ enum Main {
 
   public void setup() throws IOException, URISyntaxException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, NoSuchProviderException {
     Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    System.setProperty("javax.net.debug", "all");
+//    System.setProperty("jdk.tls.server.disableExtensions", "true");
     System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
     System.setProperty("jdk.tls.server.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
 
@@ -124,21 +124,24 @@ enum Main {
     caKeyStore.load(null, null);
     caKeyStore.setCertificateEntry("ca-certificate", caCertificate);
     caKeyStore.setCertificateEntry("ca-certificate-bundle", caBundle);
+    caKeyStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     final var trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     trustManagerFactory.init(caKeyStore);
 
     final var clientKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     clientKeyStore.load(null, null);
-    clientKeyStore.setCertificateEntry("certificate", caCertificate);
+    clientKeyStore.setCertificateEntry("ca-certificate", caCertificate);
     clientKeyStore.setCertificateEntry("ca-certificate-bundle", caBundle);
     clientKeyStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(clientKeyStore, "password".toCharArray());
 
-    final var tls = SSLContext.getInstance("TLSv1.3");
-    tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+//    final var tls = SSLContext.getInstance("TLSv1.3");
+    final var tls = SSLContext.getInstance("SSL");
+    tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), new SecureRandom());
+    HttpsURLConnection.setDefaultSSLSocketFactory(tls.getSocketFactory());
 
     SSLContext.setDefault(tls);
 
@@ -160,18 +163,18 @@ enum Main {
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
-        try {
-          var sslContext = SSLContext.getDefault();
-          var sslEngine = sslContext.createSSLEngine();
-          params.setNeedClientAuth(false);
-          params.setWantClientAuth(false);
-          params.setCipherSuites(sslEngine.getEnabledCipherSuites());
-          params.setProtocols(sslEngine.getEnabledProtocols());
-          params.setSSLParameters(sslContext.getDefaultSSLParameters());
+        var sslContext = getSSLContext();
+        var sslEngine = sslContext.createSSLEngine();
+        params.setNeedClientAuth(false);
+        params.setWantClientAuth(false);
+        params.setCipherSuites(sslEngine.getEnabledCipherSuites());
+        params.setProtocols(sslEngine.getEnabledProtocols());
 
-        } catch (NoSuchAlgorithmException e) {
-          throw new RuntimeException(e);
-        }
+        var parameters = sslContext.getDefaultSSLParameters();
+        parameters.setEnableRetransmissions(true);
+        parameters.setEndpointIdentificationAlgorithm("HTTPS");
+        params.setSSLParameters(parameters);
+
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
