@@ -7,8 +7,15 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
-import javax.net.ssl.*;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -27,7 +34,6 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
-import static java.lang.System.in;
 import static java.lang.System.out;
 import static java.util.Objects.requireNonNull;
 
@@ -44,7 +50,7 @@ enum Main {
   private final String domainCrt = STR. "\{ path }cert/domain.alpenflow.io.crt" ;
   private final String domainCsr = STR. "\{ path }cert/domain.alpenflow.io.csr" ;
 
-  public static void main(String... args) throws IOException, URISyntaxException, NoSuchAlgorithmException, UnrecoverableKeyException, CertificateException, KeyStoreException, KeyManagementException, NoSuchProviderException {
+  public static void main(String... args) throws Exception {
     Instance.setup();
   }
 
@@ -70,7 +76,7 @@ enum Main {
       while (requireNonNull(caBundleResource).available() > 0) {
         var index = 0;
         for (final var certificate : factory.generateCertificates(caBundleResource)) {
-          out.println(STR."Certificate Bundle \{index}");
+          out.println(STR. "Certificate Bundle \{ index }" );
         }
       }
     }
@@ -80,11 +86,11 @@ enum Main {
     try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(certificatePath)) {
       var factory = CertificateFactory.getInstance("X.509", "BC");
       var input = requireNonNull(certificateResource);
-      out.println(STR."Starting: \{input.available()}");
+      out.println(STR. "Starting: \{ input.available() }" );
       while (input.available() > 0) {
         var index = 0;
         for (final var certificate : factory.generateCertificates(certificateResource)) {
-          out.println(STR."Certificate \{index++} remaining: \{input.available()}");
+          out.println(STR. "Certificate \{ index++ } remaining: \{ input.available() }" );
         }
       }
     }
@@ -106,9 +112,9 @@ enum Main {
     return Optional.empty();
   }
 
-  public void setup() throws IOException, URISyntaxException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, NoSuchProviderException {
+  public void setup() throws Exception {
     Security.insertProviderAt(new BouncyCastleProvider(), 1);
-    System.setProperty("javax.net.debug", "all");
+    //System.setProperty("javax.net.debug", "all");
 //    System.setProperty("jdk.tls.server.disableExtensions", "true");
     System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
     System.setProperty("jdk.tls.server.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
@@ -138,8 +144,7 @@ enum Main {
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(clientKeyStore, "password".toCharArray());
 
-//    final var tls = SSLContext.getInstance("TLSv1.3");
-    final var tls = SSLContext.getInstance("SSL");
+    final var tls = SSLContext.getInstance("TLSv1.3");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), new SecureRandom());
     HttpsURLConnection.setDefaultSSLSocketFactory(tls.getSocketFactory());
 
@@ -149,17 +154,17 @@ enum Main {
     var path = Path.of(requireNonNull(indexResource).toURI());
 
     var httpServer = HttpServer.create(
-      new InetSocketAddress(80),
+      new InetSocketAddress(8080),
       10,
       "/",
       exchange -> HttpHandlers.of(302, Headers.of(Map.of("Location", List.of("https://alpenflow.io"))), "").handle(exchange),
       CONSOLE_LOG
     );
     httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
-    httpServer.start();
+    //httpServer.start();
 
     var fileHandler = SimpleFileServer.createFileHandler(path.getParent());
-    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", fileHandler, CONSOLE_LOG);
+    var httpsServer = HttpsServer.create(new InetSocketAddress(8448), 10, "/", fileHandler, CONSOLE_LOG);
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
@@ -178,7 +183,48 @@ enum Main {
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
-    httpsServer.start();
+    //httpsServer.start();
+
+    var threadPool = new QueuedThreadPool();
+    threadPool.setName("server");
+
+    var jetty = new Server(threadPool);
+
+
+    var httpConfig = new HttpConfiguration();
+// Add the SecureRequestCustomizer because TLS is used.
+    httpConfig.addCustomizer(new SecureRequestCustomizer());
+
+    var http11 = new HttpConnectionFactory(httpConfig);
+
+// Configure the SslContextFactory with the keyStore information.
+    var sslContextFactory = new SslContextFactory.Server();
+    sslContextFactory.setSslContext(tls);
+
+    var tlsFactory = new SslConnectionFactory(sslContextFactory, http11.getProtocol());
+
+    // Create a ServerConnector to accept connections from clients.
+    var connector = new ServerConnector(jetty, tlsFactory, http11);
+    connector.setPort(8443);
+
+// Add the Connector to the Server
+    jetty.addConnector(connector);
+
+
+// Set a simple Handler to handle requests/responses.
+    jetty.setHandler(new Handler.Abstract() {
+      @Override
+      public boolean handle(org.eclipse.jetty.server.Request request, Response response, Callback callback) {
+        response.setStatus(200);
+        callback.succeeded();
+        return true;
+      }
+    });
+
+// Start the Server to start accepting connections from clients.
+    jetty.start();
+    jetty.join();
+
     System.out.println("Https Server started on port 443");
   }
 }
