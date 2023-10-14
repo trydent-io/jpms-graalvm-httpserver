@@ -13,6 +13,7 @@
     <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <entrypoint>io.trydent.httpserver.Main2</entrypoint>
   </properties>
 
   <dependencies>
@@ -114,7 +115,7 @@
             <addOption>"--enable-preview -XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
-          <launcher>httpserver=httpserver/io.trydent.httpserver.Main</launcher>
+          <launcher>httpserver=httpserver/${entrypoint}</launcher>
         </configuration>
       </plugin>
     </plugins>
@@ -149,7 +150,7 @@
             <configuration>
               <buildArgs>--enable-preview -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
               <imageName>${project.build.finalName}</imageName>
-              <mainClass>io.trydent.httpserver.Main</mainClass>
+              <mainClass>${entrypoint}</mainClass>
             </configuration>
           </plugin>
         </plugins>
