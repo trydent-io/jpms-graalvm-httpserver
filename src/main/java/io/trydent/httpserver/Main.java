@@ -1,12 +1,6 @@
 package io.trydent.httpserver;
 
 import com.sun.net.httpserver.*;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -17,19 +11,18 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
@@ -44,6 +37,7 @@ enum Main {
   private final String caBundle = STR. "\{ path }cert/ca_bundle.crt" ;
   private final String certificate = STR. "\{ path }cert/certificate.crt" ;
   private final String privateKey = STR. "\{ path }cert/private.key" ;
+  private final String privatePem = STR. "\{ path }cert/private.pem" ;
   private final String accountPem = STR. "\{ path }cert/account.alpenflow.io.pem" ;
   private final String domainPem = STR. "\{ path }cert/domain.alpenflow.io.pem" ;
   private final String domainCrt = STR. "\{ path }cert/domain.alpenflow.io.crt" ;
@@ -52,7 +46,7 @@ enum Main {
   public static void main(String... args) throws Exception {
     Instance.setup();
   }
-
+/*
   public Optional<PrivateKey> privateKey() throws IOException {
     try (
       final var pemResource = Main.class.getClassLoader().getResourceAsStream(Instance.privateKey);
@@ -63,11 +57,20 @@ enum Main {
 
 
       if (parsedPem instanceof PEMKeyPair keyPair) {
-        final var privateKey = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey(keyPair.getPrivateKeyInfo());
+        final var privateKey = new JcaPEMKeyConverter().getPrivateKey(keyPair.getPrivateKeyInfo());
         return privateKey instanceof PrivateKey it ? Optional.of(it) : Optional.empty();
       }
     }
     return Optional.empty();
+  }*/
+
+  public PrivateKey fetchPrivateKey() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    try (
+      final var keyResource = Main.class.getClassLoader().getResourceAsStream(Instance.privatePem);
+    ) {
+      return KeyFactory.getInstance("RSA")
+        .generatePrivate(new PKCS8EncodedKeySpec(requireNonNull(keyResource).readAllBytes()));
+    }
   }
 
   public void caBundle() throws IOException, CertificateException, NoSuchProviderException {
@@ -82,12 +85,21 @@ enum Main {
     }
   }
 
-  public Certificate fetchCertificate(String certificatePath) throws IOException, CertificateException, NoSuchProviderException {
+  public Certificate fetchCertificate(String certificatePath) throws IOException, CertificateException {
     try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(certificatePath)) {
-      return CertificateFactory.getInstance("X.509", "BC")
+      return CertificateFactory.getInstance("X.509")
         .generateCertificate(requireNonNull(certificateResource));
     }
   }
+
+  public Certificate[] fetchCertificates(String certificatePath) throws IOException, CertificateException {
+    try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(certificatePath)) {
+      return CertificateFactory.getInstance("X.509")
+        .generateCertificates(requireNonNull(certificateResource))
+        .toArray(Certificate[]::new);
+    }
+  }
+/*
 
   public Optional<X509Certificate> caCertificate(String certificate) throws IOException, CertificateException {
     try (
@@ -104,17 +116,18 @@ enum Main {
 
     return Optional.empty();
   }
+*/
 
   public void setup() throws Exception {
-    Security.insertProviderAt(new BouncyCastleProvider(), 1);
+//    Security.insertProviderAt(new BouncyCastleProvider(), 1);
     //System.setProperty("javax.net.debug", "all");
 //    System.setProperty("jdk.tls.server.disableExtensions", "true");
     System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
     System.setProperty("jdk.tls.server.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
 
-    final var caCertificate = caCertificate(Instance.certificate).orElseThrow();
-    final var caBundle = caCertificate(Instance.caBundle).orElseThrow();
-    final var privateKey = privateKey().orElseThrow();
+    final Certificate caCertificate = null;
+    final Certificate caBundle = null;
+    final PrivateKey privateKey = null;
 
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, null);

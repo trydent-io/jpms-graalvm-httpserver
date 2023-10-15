@@ -1,6 +1,5 @@
 package io.trydent.httpserver;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.ResourceFactory;
@@ -12,6 +11,7 @@ import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.Certificate;
+import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -23,7 +23,9 @@ public enum Main2 {
   private final String indexHtml = STR. "\{ path }web/index.html" ;
   private final String caBundle = STR. "\{ path }cert/ca_bundle.crt" ;
   private final String certificate = STR. "\{ path }cert/certificate.crt" ;
+  private final String alpenflowIO = STR. "\{ path }cert/alpenflow.io.crt" ;
   private final String privateKey = STR. "\{ path }cert/private.key" ;
+  private final String privatePem = STR. "\{ path }cert/private.pem" ;
   private final String accountPem = STR. "\{ path }cert/account.alpenflow.io.pem" ;
   private final String domainPem = STR. "\{ path }cert/domain.alpenflow.io.pem" ;
   private final String domainCrt = STR. "\{ path }cert/domain.alpenflow.io.crt" ;
@@ -31,21 +33,26 @@ public enum Main2 {
 
 
   public static void main(String[] args) throws Exception {
-    Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    System.setProperty("jdk.tls.server.disableExtensions", "false");
     System.setProperty("javax.net.debug", "all");
-    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
+    System.setProperty("https.protocols", "TLSv1.3");
     System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true");
-    System.setProperty("com.sun.net.ssl.enableECC", "false");
-    System.setProperty("jsse.enableSNIExtension", "false");
+    System.setProperty("com.sun.net.ssl.enableECC", "true");
+    System.setProperty("jsse.enableSNIExtension", "true");
+//    Security.addProvider(new BouncyCastleProvider());
 
 
     final var caCertificate = Main.Instance.fetchCertificate(Instance.certificate);
     final var caBundle = Main.Instance.fetchCertificate(Instance.caBundle);
-    final var privateKey = Main.Instance.privateKey().orElseThrow();
+    final var certs = Main.Instance.fetchCertificates(Instance.alpenflowIO);
+
+    System.out.println(STR."Array: \{ Arrays.toString(certs) }");
+
+    final var privateKey = Main.Instance.fetchPrivateKey();
 
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, "password".toCharArray());
-    trustStore.setCertificateEntry("alpenflow.io", caBundle);
+    trustStore.setCertificateEntry("alpenflow.io", certs[0]);
     //trustStore.setCertificateEntry("ca-bundle", caBundle);
     //trustStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
@@ -54,7 +61,8 @@ public enum Main2 {
 
     final var keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, "password".toCharArray());
-    keyStore.setKeyEntry("alpenflow.io", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
+    //keyStore.setCertificateEntry("alpenflow.io", certs[0]);
+    keyStore.setKeyEntry("alpenflow.io", privateKey, "password".toCharArray(), certs);
 
     var threadPool = new QueuedThreadPool();
     threadPool.setName("server");
@@ -82,7 +90,7 @@ public enum Main2 {
 
 // Create a ServerConnector to accept connections from clients.
     var connector = new ServerConnector(server, tls, http11);
-    connector.setPort(443);
+    connector.setPort(8443);
 
 // Add the Connector to the Server
     server.addConnector(connector);
