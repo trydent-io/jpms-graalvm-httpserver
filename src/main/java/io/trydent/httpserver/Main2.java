@@ -33,19 +33,20 @@ public enum Main2 {
   public static void main(String[] args) throws Exception {
     Security.insertProviderAt(new BouncyCastleProvider(), 1);
     System.setProperty("javax.net.debug", "all");
+    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
     System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true");
     System.setProperty("com.sun.net.ssl.enableECC", "false");
     System.setProperty("jsse.enableSNIExtension", "false");
 
 
-    final var caCertificate = Main.Instance.caCertificate(Instance.certificate).orElseThrow();
-    final var caBundle = Main.Instance.caCertificate(Instance.caBundle).orElseThrow();
+    final var caCertificate = Main.Instance.fetchCertificate(Instance.certificate);
+    final var caBundle = Main.Instance.fetchCertificate(Instance.caBundle);
     final var privateKey = Main.Instance.privateKey().orElseThrow();
 
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, "password".toCharArray());
-    trustStore.setCertificateEntry("ca-certificate", caCertificate);
-    trustStore.setCertificateEntry("ca-bundle", caBundle);
+    trustStore.setCertificateEntry("alpenflow.io", caBundle);
+    //trustStore.setCertificateEntry("ca-bundle", caBundle);
     //trustStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     final var trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -53,7 +54,7 @@ public enum Main2 {
 
     final var keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, "password".toCharArray());
-    keyStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
+    keyStore.setKeyEntry("alpenflow.io", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     var threadPool = new QueuedThreadPool();
     threadPool.setName("server");

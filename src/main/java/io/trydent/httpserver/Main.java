@@ -19,7 +19,6 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
@@ -62,6 +61,7 @@ enum Main {
     ) {
       final var parsedPem = pemParser.readObject();
 
+
       if (parsedPem instanceof PEMKeyPair keyPair) {
         final var privateKey = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey(keyPair.getPrivateKeyInfo());
         return privateKey instanceof PrivateKey it ? Optional.of(it) : Optional.empty();
@@ -82,17 +82,10 @@ enum Main {
     }
   }
 
-  public void certificates(String certificatePath) throws IOException, CertificateException, NoSuchProviderException {
+  public Certificate fetchCertificate(String certificatePath) throws IOException, CertificateException, NoSuchProviderException {
     try (final var certificateResource = Main.class.getClassLoader().getResourceAsStream(certificatePath)) {
-      var factory = CertificateFactory.getInstance("X.509", "BC");
-      var input = requireNonNull(certificateResource);
-      out.println(STR. "Starting: \{ input.available() }" );
-      while (input.available() > 0) {
-        var index = 0;
-        for (final var certificate : factory.generateCertificates(certificateResource)) {
-          out.println(STR. "Certificate \{ index++ } remaining: \{ input.available() }" );
-        }
-      }
+      return CertificateFactory.getInstance("X.509", "BC")
+        .generateCertificate(requireNonNull(certificateResource));
     }
   }
 
