@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
@@ -64,12 +65,21 @@ enum Main {
     return Optional.empty();
   }*/
 
-  public PrivateKey fetchPrivateKey() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+  public PrivateKey fetchPrivatePem() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
     try (
       final var keyResource = Main.class.getClassLoader().getResourceAsStream(Instance.privatePem);
     ) {
       return KeyFactory.getInstance("RSA")
         .generatePrivate(new PKCS8EncodedKeySpec(requireNonNull(keyResource).readAllBytes()));
+    }
+  }
+
+  public KeyStore fetchKeyStore() throws IOException, GeneralSecurityException {
+    try (
+      final var keyResource = Main.class.getClassLoader().getResourceAsStream(Instance.privatePem);
+      final var bundleResource = Main.class.getClassLoader().getResourceAsStream(Instance.caBundle)
+    ) {
+      return PemReader.loadKeyStore(bundleResource, keyResource, Optional.of("password"));
     }
   }
 
