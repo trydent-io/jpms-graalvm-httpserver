@@ -11,7 +11,6 @@
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <entrypoint>io.trydent.httpserver.Main2</entrypoint>
   </properties>
@@ -80,9 +79,11 @@
         </executions>
         <configuration>
           <compilerArgs>
+            <arg>--add-exports</arg>
+            <arg>java.base/sun.security.util=httpserver</arg>
             <arg>--enable-preview</arg>
             <arg>-Xpkginfo:always</arg>
-            <!--              <arg>-Xlint:preview</arg>-->
+            <!--<arg>-Xlint:preview</arg>-->
           </compilerArgs>
         </configuration>
       </plugin>
@@ -113,6 +114,7 @@
             <modulePath>${java.home}/jmods</modulePath>
           </modulePaths>
           <addOptions>
+            <addOption>--enable-preview</addOption>
             <addOption>"--enable-preview -XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
@@ -149,7 +151,7 @@
               </execution>
             </executions>
             <configuration>
-              <buildArgs>--enable-preview -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
+              <buildArgs>--enable-preview --add-exports java.base/sun.security.util=httpserver -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
               <imageName>${project.build.finalName}</imageName>
               <mainClass>${entrypoint}</mainClass>
             </configuration>

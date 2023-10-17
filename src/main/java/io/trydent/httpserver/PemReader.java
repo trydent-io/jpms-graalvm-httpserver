@@ -1,10 +1,14 @@
 package io.trydent.httpserver;
 
+import sun.security.util.DerInputStream;
+import sun.security.util.DerValue;
+
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -13,15 +17,13 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.*;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static javax.crypto.Cipher.DECRYPT_MODE;
 
@@ -93,7 +95,7 @@ public final class PemReader {
   }
 
   private static EncodedKeySpec readPrivateKey(InputStream keyFile, Optional<String> keyPassword) throws IOException, GeneralSecurityException {
-    byte[] bytes = keyFile.readAllBytes();
+    var bytes = keyFile.readAllBytes();
     var privateKeyPlain = new String(bytes, UTF_8);
     System.out.println(privateKeyPlain);
 
@@ -121,6 +123,34 @@ public final class PemReader {
 
   private static byte[] base64Decode(String base64) {
     return Base64.getMimeDecoder().decode(base64.getBytes(US_ASCII));
+  }
+
+  public static PrivateKey pkcs1PrivateKey(String file) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    try (final var input = Main.class.getClassLoader().getResourceAsStream(file)) {
+      var content = new String(requireNonNull(input).readAllBytes())
+        .replaceAll("\\n", "")
+        .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+        .replace("-----END RSA PRIVATE KEY-----", "");
+
+      System.out.println(content);
+
+      var bytes = Base64.getMimeDecoder().decode(content);
+
+      var derReader = new DerInputStream(bytes);
+      var seq = derReader.getSequence(0);
+      // skip version seq[0];
+      var modulus = seq[1].getBigInteger();
+      var publicExp = seq[2].getBigInteger();
+      var privateExp = seq[3].getBigInteger();
+      var prime1 = seq[4].getBigInteger();
+      var prime2 = seq[5].getBigInteger();
+      var exp1 = seq[6].getBigInteger();
+      var exp2 = seq[7].getBigInteger();
+      var crtCoef = seq[8].getBigInteger();
+
+      return KeyFactory.getInstance("RSA")
+        .generatePrivate(new RSAPrivateCrtKeySpec(modulus, publicExp, privateExp, prime1, prime2, exp1, exp2, crtCoef));
+    }
   }
 
 /*  private static String readFile(File file) throws IOException {

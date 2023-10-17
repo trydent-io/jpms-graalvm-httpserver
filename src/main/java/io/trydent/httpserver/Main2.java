@@ -9,6 +9,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import javax.net.ssl.TrustManagerFactory;
 import java.nio.file.Path;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public enum Main2 {
 
   public static void main(String[] args) throws Exception {
     System.setProperty("jdk.tls.server.disableExtensions", "false");
-    System.setProperty("javax.net.debug", "all");
+    //System.setProperty("javax.net.debug", "all");
     System.setProperty("https.protocols", "TLSv1.3");
     System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true");
     System.setProperty("com.sun.net.ssl.enableECC", "true");
@@ -47,21 +48,21 @@ public enum Main2 {
     //final var privateKey = Main.Instance.fetchPrivatePem();
 
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    trustStore.load(null, "password".toCharArray());
+    trustStore.load(null, null);
     trustStore.setCertificateEntry("alpenflow.io", caCertificate);
     //trustStore.setCertificateEntry("ca-bundle", caBundle);
     //trustStore.setKeyEntry("private-key", privateKey, "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
     final var trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     trustManagerFactory.init(trustStore);
-/*
+
 
     final var keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    keyStore.load(null, "password".toCharArray());
+    keyStore.load(null, null);
     //keyStore.setCertificateEntry("alpenflow.io", certs[0]);
-    keyStore.setKeyEntry("alpenflow.io", privateKey, "password".toCharArray(), certs);
+    keyStore.setKeyEntry("alpenflow.io", PemReader.pkcs1PrivateKey(Instance.privateKey), "password".toCharArray(), new Certificate[]{caCertificate, caBundle});
 
-*/
+
     var threadPool = new QueuedThreadPool();
     threadPool.setName("server");
 
@@ -80,19 +81,14 @@ public enum Main2 {
     var sslContextFactory = new SslContextFactory.Server();
     sslContextFactory.setTrustStore(trustStore);
     sslContextFactory.setTrustStorePassword("password");
-    try (
-      final var keyResource = Main.class.getClassLoader().getResourceAsStream(Instance.privateKey);
-      final var bundleResource = Main.class.getClassLoader().getResourceAsStream(Instance.caBundle)
-    ) {
-      sslContextFactory.setKeyStore(PemReader.loadKeyStore(bundleResource, keyResource, Optional.empty()));
-      sslContextFactory.setKeyStorePassword("password");
-    }
+    sslContextFactory.setKeyStore(keyStore);
+    sslContextFactory.setKeyStorePassword("password");
 // The ConnectionFactory for TLS.
     var tls = new SslConnectionFactory(sslContextFactory, http11.getProtocol());
 
 // Create a ServerConnector to accept connections from clients.
     var connector = new ServerConnector(server, tls, http11);
-    connector.setPort(8443);
+    connector.setPort(443);
 
 // Add the Connector to the Server
     server.addConnector(connector);

@@ -1,5 +1,6 @@
 module httpserver {
   requires jdk.httpserver;
+  requires jdk.unsupported;
 
   requires org.eclipse.jetty.server;
 /*
