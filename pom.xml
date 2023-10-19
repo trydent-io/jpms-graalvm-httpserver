@@ -79,8 +79,6 @@
         </executions>
         <configuration>
           <compilerArgs>
-            <arg>--add-exports</arg>
-            <arg>java.base/sun.security.util=httpserver</arg>
             <arg>--enable-preview</arg>
             <arg>-Xpkginfo:always</arg>
             <!--<arg>-Xlint:preview</arg>-->
@@ -114,7 +112,6 @@
             <modulePath>${java.home}/jmods</modulePath>
           </modulePaths>
           <addOptions>
-            <addOption>--enable-preview</addOption>
             <addOption>"--enable-preview -XX:+DoEscapeAnalysis -XX:+UseStringDeduplication -XX:+UseCompressedOops -XX:+UseZGC -XX:+ZGenerational -Xms64m -Xmx128m -ea -Dfile.encoding=UTF-8"</addOption>
           </addOptions>
           <classifier>dist-${os.arch}</classifier>
@@ -151,7 +148,7 @@
               </execution>
             </executions>
             <configuration>
-              <buildArgs>--enable-preview --add-exports java.base/sun.security.util=httpserver -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
+              <buildArgs>--enable-preview -H:+UnlockExperimentalVMOptions --enable-all-security-services -H:+ReportUnsupportedElementsAtRuntime -H:IncludeResources=.*io/trydent/httpserver/web/.*$ -H:IncludeResources=.*io/trydent/httpserver/cert/.*$</buildArgs>
               <imageName>${project.build.finalName}</imageName>
               <mainClass>${entrypoint}</mainClass>
             </configuration>

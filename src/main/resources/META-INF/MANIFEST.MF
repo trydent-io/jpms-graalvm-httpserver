@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Add-Exports: java.base/sum.security.util=httpserver
-Build-Jdk: 21-tem
-Built-By: Alpenflow
