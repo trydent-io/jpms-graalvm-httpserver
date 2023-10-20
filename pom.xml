@@ -100,7 +100,7 @@
           </execution>
         </executions>
         <configuration>
-          <ignoreSigningInformation>true</ignoreSigningInformation>
+<!--          <ignoreSigningInformation>true</ignoreSigningInformation>-->
           <verbose>true</verbose>
           <includeLocales>
             <locale>it</locale>

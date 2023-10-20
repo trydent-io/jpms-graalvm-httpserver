@@ -2,7 +2,10 @@ package io.trydent.httpserver;
 
 import com.sun.net.httpserver.*;
 
-import javax.net.ssl.*;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -21,8 +24,6 @@ import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
 import static java.lang.System.out;
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 enum Main {
@@ -124,12 +125,12 @@ enum Main {
 */
 
   public void setup() throws Exception {
-    System.setProperty("jdk.tls.server.disableExtensions", "false");
-    //System.setProperty("javax.net.debug", "all");
-//    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
+//    System.setProperty("jdk.tls.server.disableExtensions", "false");
+    System.setProperty("javax.net.debug", "all");
+    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
 //    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
-    System.setProperty("com.sun.net.ssl.enableECC", "true");
-    System.setProperty("jsse.enableSNIExtension", "true");
+//    System.setProperty("com.sun.net.ssl.enableECC", "true");
+//    System.setProperty("jsse.enableSNIExtension", "true");
     System.setProperty("jdk.tls.ephemeralDHKeySize", "2048");
 /*
     System.setProperty("jdk.tls.disabledAlgorithms", """
@@ -195,19 +196,18 @@ enum Main {
         var parameters = sslContext.getDefaultSSLParameters();
         parameters.setEnableRetransmissions(true);
         parameters.setEndpointIdentificationAlgorithm("HTTPS");
-        parameters.setApplicationProtocols(
+        parameters.setNeedClientAuth(false);
+        /*parameters.setApplicationProtocols(
           stream(sslEngine.getEnabledProtocols())
             .peek(it -> out.println(STR."Current App Protocol: \{it}"))
             //.filter(it -> !it.startsWith("SSL") && !it.startsWith("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
             //.peek(it -> out.println(STR."App Protocol: \{it}"))
             .toArray(String[]::new)
-        );
+        );*/
         //parameters.setUseCipherSuitesOrder(true);
         //parameters.setServerNames(List.of(new SNIHostName(sslEngine.getPeerHost().getBytes(US_ASCII))));
         params.setSSLParameters(parameters);
-        params.setNeedClientAuth(false);
-        params.setWantClientAuth(false);
-        params.setCipherSuites(
+/*        params.setCipherSuites(
           stream(sslEngine.getEnabledCipherSuites())
             //.filter(it -> !it.startsWith("TLS_RSA_") && !it.startsWith("SSL") && !it.contains("_NULL_") && !it.contains("_anon_"))
             //.filter(it -> it.endsWith("AES_256_GCM_SHA384") || it.endsWith("AES_128_GCM_SHA256") || it.endsWith("CHACHA20_POLY1305_SHA256"))
@@ -220,7 +220,7 @@ enum Main {
             //.filter(it -> !it.equals("SSL") && !it.equals("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
             //.peek(it -> out.println(STR."Protocol: \{it}"))
             .toArray(String[]::new)
-        );
+        );*/
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
