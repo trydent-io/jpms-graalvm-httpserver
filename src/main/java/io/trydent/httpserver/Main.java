@@ -1,10 +1,6 @@
 package io.trydent.httpserver;
 
 import com.sun.net.httpserver.*;
-import org.eclipse.jetty.server.*;
-import org.eclipse.jetty.util.Callback;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -25,6 +21,8 @@ import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
 import static java.lang.System.out;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 enum Main {
@@ -127,12 +125,13 @@ enum Main {
 
   public void setup() throws Exception {
     System.setProperty("jdk.tls.server.disableExtensions", "false");
-    System.setProperty("javax.net.debug", "all");
-    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
-    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
+    //System.setProperty("javax.net.debug", "all");
+//    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
+//    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
     System.setProperty("com.sun.net.ssl.enableECC", "true");
     System.setProperty("jsse.enableSNIExtension", "true");
     System.setProperty("jdk.tls.ephemeralDHKeySize", "2048");
+/*
     System.setProperty("jdk.tls.disabledAlgorithms", """
       SSLv2Hello, SSLv3, TLSv1, TLSv1.1, DES, DESede, RC4, MD5withRSA, DH keySize < 1024,
       EC keySize < 224, DES40_CBC, RC4_40,
@@ -142,9 +141,12 @@ enum Main {
       TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
       TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_DHE_RSA_WITH_AES_128_CBC_SHA
       """);
+*/
+/*
 
     System.setProperty("jdk.tls.client.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
     System.setProperty("jdk.tls.server.cipherSuites", "TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_GCM_SHA384, TLS_RSA_WITH_AES_128_GCM_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA256, TLS_RSA_WITH_AES_128_CBC_SHA256, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_EMPTY_RENEGOTIATION_INFO_SCSV");
+*/
 
     final var caCertificate = fetchCertificate(Instance.certificate);
     final var caBundle = fetchCertificate(Instance.caBundle);
@@ -164,7 +166,7 @@ enum Main {
     var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(keyStore, "password".toCharArray());
 
-    final var tls = SSLContext.getInstance("TLS");
+    final var tls = SSLContext.getInstance("TLSv1.3");
     tls.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), new SecureRandom());
     HttpsURLConnection.setDefaultSSLSocketFactory(tls.getSocketFactory());
 
@@ -190,15 +192,35 @@ enum Main {
       public void configure(HttpsParameters params) {
         var sslContext = getSSLContext();
         var sslEngine = sslContext.createSSLEngine();
-        params.setNeedClientAuth(false);
-        params.setCipherSuites(sslEngine.getEnabledCipherSuites());
-        params.setProtocols(sslEngine.getEnabledProtocols());
-
         var parameters = sslContext.getDefaultSSLParameters();
-        parameters.setEnableRetransmissions(false);
+        parameters.setEnableRetransmissions(true);
         parameters.setEndpointIdentificationAlgorithm("HTTPS");
+        parameters.setApplicationProtocols(
+          stream(sslEngine.getEnabledProtocols())
+            .peek(it -> out.println(STR."Current App Protocol: \{it}"))
+            //.filter(it -> !it.startsWith("SSL") && !it.startsWith("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
+            //.peek(it -> out.println(STR."App Protocol: \{it}"))
+            .toArray(String[]::new)
+        );
+        //parameters.setUseCipherSuitesOrder(true);
+        //parameters.setServerNames(List.of(new SNIHostName(sslEngine.getPeerHost().getBytes(US_ASCII))));
         params.setSSLParameters(parameters);
-
+        params.setNeedClientAuth(false);
+        params.setWantClientAuth(false);
+        params.setCipherSuites(
+          stream(sslEngine.getEnabledCipherSuites())
+            //.filter(it -> !it.startsWith("TLS_RSA_") && !it.startsWith("SSL") && !it.contains("_NULL_") && !it.contains("_anon_"))
+            //.filter(it -> it.endsWith("AES_256_GCM_SHA384") || it.endsWith("AES_128_GCM_SHA256") || it.endsWith("CHACHA20_POLY1305_SHA256"))
+            .peek(it -> out.println(STR."Cipher: \{it}"))
+            .toArray(String[]::new)
+        );
+        params.setProtocols(
+          stream(sslEngine.getEnabledProtocols())
+            .peek(it -> out.println(STR."Current Protocol: \{it}"))
+            //.filter(it -> !it.equals("SSL") && !it.equals("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
+            //.peek(it -> out.println(STR."Protocol: \{it}"))
+            .toArray(String[]::new)
+        );
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
