@@ -34,8 +34,7 @@ public enum Main2 {
 
   public static void main(String[] args) throws Exception {
     System.setProperty("jdk.tls.server.disableExtensions", "false");
-    //System.setProperty("javax.net.debug", "all");
-    System.setProperty("https.protocols", "TLSv1.3");
+    System.setProperty("javax.net.debug", "all");
     System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true");
     System.setProperty("com.sun.net.ssl.enableECC", "true");
     System.setProperty("jsse.enableSNIExtension", "true");
