@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
 import static java.lang.System.out;
+import static java.lang.System.setProperty;
 import static java.util.Objects.requireNonNull;
 
 enum Main {
@@ -128,6 +129,7 @@ enum Main {
 //    System.setProperty("jdk.tls.server.disableExtensions", "false");
     System.setProperty("javax.net.debug", "all");
     System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+    System.setProperty("jdk.tls.namedGroups", "sepc384r1, x25519, secp521r1, ffdhe2048, secp256r1");
 //    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
 //    System.setProperty("com.sun.net.ssl.enableECC", "true");
 //    System.setProperty("jsse.enableSNIExtension", "true");
@@ -197,6 +199,7 @@ enum Main {
         parameters.setEnableRetransmissions(true);
         parameters.setEndpointIdentificationAlgorithm("HTTPS");
         parameters.setNeedClientAuth(false);
+        parameters.setNamedGroups(sslEngine.getSSLParameters().getNamedGroups());
         /*parameters.setApplicationProtocols(
           stream(sslEngine.getEnabledProtocols())
             .peek(it -> out.println(STR."Current App Protocol: \{it}"))
