@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
 import static java.lang.System.out;
-import static java.lang.System.setProperty;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 enum Main {
@@ -34,6 +34,7 @@ enum Main {
   private final String indexHtml = STR. "\{ path }web/index.html" ;
   private final String caBundle = STR. "\{ path }cert/ca_bundle.crt" ;
   private final String certificate = STR. "\{ path }cert/certificate.crt" ;
+  private final String certificateIO = STR. "\{ path }cert/alpenflow.io.crt" ;
   private final String privateKey = STR. "\{ path }cert/private.key" ;
   private final String privatePem = STR. "\{ path }cert/private.pem" ;
   private final String accountPem = STR. "\{ path }cert/account.alpenflow.io.pem" ;
@@ -127,9 +128,9 @@ enum Main {
 
   public void setup() throws Exception {
 //    System.setProperty("jdk.tls.server.disableExtensions", "false");
-    System.setProperty("javax.net.debug", "all");
+//    System.setProperty("javax.net.debug", "all");
     System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
-    System.setProperty("jdk.tls.namedGroups", "sepc384r1, x25519, secp521r1, ffdhe2048, secp256r1");
+//    System.setProperty("jdk.tls.namedGroups", "sepc384r1, x25519, secp521r1, ffdhe2048, secp256r1");
 //    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
 //    System.setProperty("com.sun.net.ssl.enableECC", "true");
 //    System.setProperty("jsse.enableSNIExtension", "true");
@@ -199,31 +200,44 @@ enum Main {
         parameters.setEnableRetransmissions(true);
         parameters.setEndpointIdentificationAlgorithm("HTTPS");
         parameters.setNeedClientAuth(false);
-        parameters.setNamedGroups(sslEngine.getSSLParameters().getNamedGroups());
-        /*parameters.setApplicationProtocols(
+        parameters.setNamedGroups(
+          stream(sslEngine.getSSLParameters().getNamedGroups())
+            .peek(it -> out.println(STR. "Named group: \{ it }" ))
+            .toArray(String[]::new)
+        );
+        parameters.setApplicationProtocols(
           stream(sslEngine.getEnabledProtocols())
             .peek(it -> out.println(STR."Current App Protocol: \{it}"))
             //.filter(it -> !it.startsWith("SSL") && !it.startsWith("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
             //.peek(it -> out.println(STR."App Protocol: \{it}"))
             .toArray(String[]::new)
-        );*/
-        //parameters.setUseCipherSuitesOrder(true);
+        );
+        parameters.setUseCipherSuitesOrder(true);
         //parameters.setServerNames(List.of(new SNIHostName(sslEngine.getPeerHost().getBytes(US_ASCII))));
         params.setSSLParameters(parameters);
-/*        params.setCipherSuites(
+        params.setCipherSuites(
           stream(sslEngine.getEnabledCipherSuites())
+            .filter(it ->
+              !List.of(
+                "TLS_RSA_WITH_AES_128_CBC_SHA",
+                "TLS_RSA_WITH_AES_256_CBC_SHA",
+                "TLS_RSA_WITH_AES_128_CBC_SHA256",
+                "TLS_RSA_WITH_AES_256_CBC_SHA256",
+                "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_RSA_WITH_AES_256_GCM_SHA384"
+              ).contains(it))
             //.filter(it -> !it.startsWith("TLS_RSA_") && !it.startsWith("SSL") && !it.contains("_NULL_") && !it.contains("_anon_"))
             //.filter(it -> it.endsWith("AES_256_GCM_SHA384") || it.endsWith("AES_128_GCM_SHA256") || it.endsWith("CHACHA20_POLY1305_SHA256"))
-            .peek(it -> out.println(STR."Cipher: \{it}"))
+            .peek(it -> out.println(STR. "Cipher: \{ it }" ))
             .toArray(String[]::new)
         );
         params.setProtocols(
           stream(sslEngine.getEnabledProtocols())
-            .peek(it -> out.println(STR."Current Protocol: \{it}"))
-            //.filter(it -> !it.equals("SSL") && !it.equals("SSLv2") && !it.startsWith("SSLv2Hello") && !it.startsWith("SSLv3"))
+            .peek(it -> out.println(STR. "Current Protocol: \{ it }" ))
+            .filter(it -> !it.equals("SSL") && !it.equals("SSLv2") && !it.equals("SSLv2Hello") && !it.equals("SSLv3"))
             //.peek(it -> out.println(STR."Protocol: \{it}"))
             .toArray(String[]::new)
-        );*/
+        );
       }
     });
     httpsServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
