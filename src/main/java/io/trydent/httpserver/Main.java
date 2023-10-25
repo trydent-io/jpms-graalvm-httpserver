@@ -129,7 +129,7 @@ enum Main {
   public void setup() throws Exception {
 //    System.setProperty("jdk.tls.server.disableExtensions", "false");
 //    System.setProperty("javax.net.debug", "all");
-    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+    System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
 //    System.setProperty("jdk.tls.namedGroups", "sepc384r1, x25519, secp521r1, ffdhe2048, secp256r1");
 //    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
 //    System.setProperty("com.sun.net.ssl.enableECC", "true");

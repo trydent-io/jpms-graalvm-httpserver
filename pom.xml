@@ -13,7 +13,32 @@
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <entrypoint>io.trydent.httpserver.Main</entrypoint>
+    <bouncycastle.version>1.76</bouncycastle.version>
+    <acme4j-client.version>2.16</acme4j-client.version>
   </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>${bouncycastle.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <version>${bouncycastle.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcutil-jdk18on</artifactId>
+      <version>1.76</version>
+    </dependency>
+    <dependency>
+      <groupId>org.shredzone.acme4j</groupId>
+      <artifactId>acme4j-client</artifactId>
+      <version>${acme4j-client.version}</version>
+    </dependency>
+  </dependencies>
 
   <build>
     <finalName>httpserver</finalName>
@@ -22,32 +47,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
-        <executions>
-          <!-- Replacing default-compile as it is treated specially by Maven -->
-          <execution>
-            <id>default-compile</id>
-            <phase>none</phase>
-          </execution>
-          <!-- Replacing default-testCompile as it is treated specially by Maven -->
-          <execution>
-            <id>default-testCompile</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>java-compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>java-test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <compilerArgs>
             <arg>--enable-preview</arg>
@@ -71,7 +70,7 @@
           </execution>
         </executions>
         <configuration>
-<!--          <ignoreSigningInformation>true</ignoreSigningInformation>-->
+          <ignoreSigningInformation>true</ignoreSigningInformation>
           <verbose>true</verbose>
           <includeLocales>
             <locale>it</locale>
