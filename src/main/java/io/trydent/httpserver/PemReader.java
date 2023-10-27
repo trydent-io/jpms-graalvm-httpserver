@@ -2,6 +2,10 @@ package io.trydent.httpserver;
 
 
 import io.trydent.httpserver.cert.DerInputStream;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
@@ -24,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import static io.trydent.httpserver.Main.Instance;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -156,19 +161,20 @@ public final class PemReader {
     }
   }
 
-/*  private static String readFile(File file) throws IOException {
-    try (Reader reader = new InputStreamReader(new FileInputStream(file), US_ASCII)) {
-      var stringBuilder = new StringBuilder();
-
-      var buffer = CharBuffer.allocate(2048);
-      while (reader.read(buffer) != -1) {
-        buffer.flip();
-        stringBuilder.append(buffer);
-        buffer.clear();
-      }
-      return stringBuilder.toString();
+  public static PrivateKey fetchECPrivateKey(String file) throws IOException, InvalidKeyException {
+    try (
+      final var input = Main.class.getClassLoader().getResourceAsStream(file);
+      final var reader = new InputStreamReader(requireNonNull(input))
+    ) {
+      var pemParser = new PEMParser(reader);
+      var parsed = pemParser.readObject();
+      var converter = new JcaPEMKeyConverter();
+      return switch (parsed) {
+        case PrivateKeyInfo info -> converter.getPrivateKey(info);
+        default -> throw new InvalidKeyException(STR. "Can't read private-key info's from \{ file }" );
+      };
     }
-  }*/
+  }
 
   private static String readFile(InputStream input) throws IOException {
     try (Reader reader = new InputStreamReader(input, US_ASCII)) {
@@ -182,5 +188,10 @@ public final class PemReader {
       }
       return stringBuilder.toString();
     }
+  }
+
+  public static void main(String[] args) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    //Security.addProvider(new BouncyCastleProvider());
+    System.out.println(PemReader.fetchECPrivateKey(Instance.euPrivateKey));
   }
 }

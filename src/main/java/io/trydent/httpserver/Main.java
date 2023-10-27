@@ -1,6 +1,7 @@
 package io.trydent.httpserver;
 
 import com.sun.net.httpserver.*;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManagerFactory;
@@ -36,6 +37,7 @@ enum Main {
   private final String certificate = STR. "\{ path }cert/certificate.crt" ;
   private final String certificateIO = STR. "\{ path }cert/alpenflow.io.crt" ;
   private final String privateKey = STR. "\{ path }cert/private.key" ;
+  final String euPrivateKey = STR. "\{ path }cert/alpenflow.io.private.key" ;
   private final String privatePem = STR. "\{ path }cert/private.pem" ;
   private final String accountPem = STR. "\{ path }cert/account.alpenflow.io.pem" ;
   private final String domainPem = STR. "\{ path }cert/domain.alpenflow.io.pem" ;
@@ -127,14 +129,15 @@ enum Main {
 */
 
   public void setup() throws Exception {
+    Security.addProvider(new BouncyCastleProvider());
 //    System.setProperty("jdk.tls.server.disableExtensions", "false");
-//    System.setProperty("javax.net.debug", "all");
+    System.setProperty("javax.net.debug", "all");
     System.setProperty("https.protocols", "TLSv1.3,TLSv1.2Hello");
 //    System.setProperty("jdk.tls.namedGroups", "sepc384r1, x25519, secp521r1, ffdhe2048, secp256r1");
 //    System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "false");
 //    System.setProperty("com.sun.net.ssl.enableECC", "true");
 //    System.setProperty("jsse.enableSNIExtension", "true");
-    System.setProperty("jdk.tls.ephemeralDHKeySize", "2048");
+    System.setProperty("jdk.tls.ephemeralDHKeySize", "4096");
 /*
     System.setProperty("jdk.tls.disabledAlgorithms", """
       SSLv2Hello, SSLv3, TLSv1, TLSv1.1, DES, DESede, RC4, MD5withRSA, DH keySize < 1024,
@@ -154,7 +157,7 @@ enum Main {
 
     final var caCertificate = fetchCertificate(Instance.certificate);
     final var caBundle = fetchCertificate(Instance.caBundle);
-    final var privateKey = PemReader.pkcs1PrivateKey(Instance.privateKey);
+    final var privateKey = PemReader.fetchECPrivateKey(Instance.euPrivateKey);
 
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, null);
@@ -200,11 +203,14 @@ enum Main {
         parameters.setEnableRetransmissions(true);
         parameters.setEndpointIdentificationAlgorithm("HTTPS");
         parameters.setNeedClientAuth(false);
+/*
         parameters.setNamedGroups(
           stream(sslEngine.getSSLParameters().getNamedGroups())
             .peek(it -> out.println(STR. "Named group: \{ it }" ))
             .toArray(String[]::new)
         );
+*/
+/*
         parameters.setApplicationProtocols(
           stream(sslEngine.getEnabledProtocols())
             .peek(it -> out.println(STR."Current App Protocol: \{it}"))
@@ -212,11 +218,13 @@ enum Main {
             //.peek(it -> out.println(STR."App Protocol: \{it}"))
             .toArray(String[]::new)
         );
+*/
         parameters.setUseCipherSuitesOrder(true);
         //parameters.setServerNames(List.of(new SNIHostName(sslEngine.getPeerHost().getBytes(US_ASCII))));
         params.setSSLParameters(parameters);
         params.setCipherSuites(
           stream(sslEngine.getEnabledCipherSuites())
+/*
             .filter(it ->
               !List.of(
                 "TLS_RSA_WITH_AES_128_CBC_SHA",
@@ -226,7 +234,8 @@ enum Main {
                 "TLS_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_RSA_WITH_AES_256_GCM_SHA384"
               ).contains(it))
-            //.filter(it -> !it.startsWith("TLS_RSA_") && !it.startsWith("SSL") && !it.contains("_NULL_") && !it.contains("_anon_"))
+*/
+            .filter(it -> !it.startsWith("TLS_RSA_") && !it.startsWith("SSL") && !it.contains("_NULL_") && !it.contains("_anon_"))
             //.filter(it -> it.endsWith("AES_256_GCM_SHA384") || it.endsWith("AES_128_GCM_SHA256") || it.endsWith("CHACHA20_POLY1305_SHA256"))
             .peek(it -> out.println(STR. "Cipher: \{ it }" ))
             .toArray(String[]::new)
