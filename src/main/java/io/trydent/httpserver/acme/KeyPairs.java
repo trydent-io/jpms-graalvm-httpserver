@@ -5,8 +5,6 @@ import java.security.spec.ECGenParameterSpec;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static java.lang.System.out;
-
 public sealed interface KeyPairs extends Supplier<Optional<KeyPair>> {
   static KeyPairs fromEC() {return new From("EC");}
 
