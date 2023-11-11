@@ -1,6 +1,7 @@
 package io.trydent.httpserver;
 
 import com.sun.net.httpserver.*;
+import io.trydent.httpserver.gateway.Gateway;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -21,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
 import static io.trydent.httpserver.ConsoleLog.CONSOLE_LOG;
@@ -159,6 +161,10 @@ enum Main {
     final var caBundle = fetchCertificate(Instance.caBundle);
     final var privateKey = PemReader.fetchECPrivateKey(Instance.euPrivateKey);
 
+    final var send = new Gateway.Action.Send("Hello World");
+    final var gateway = Gateway.actions();
+    gateway.register(Gateway.Action.Send.class, action -> new Gateway.Result.OK(action.message()));
+
     final var trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, null);
     trustStore.setCertificateEntry("alpenflow.io", caCertificate);
@@ -193,7 +199,16 @@ enum Main {
     httpServer.start();
 
     var fileHandler = SimpleFileServer.createFileHandler(path.getParent());
-    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", fileHandler, CONSOLE_LOG);
+    var httpsServer = HttpsServer.create(new InetSocketAddress(443), 10, "/", exchange -> {
+      try {
+        switch (gateway.send(send).get()) {
+          case Gateway.Result.OK(var message) -> HttpHandlers.of(200, Headers.of(), message).handle(exchange);
+          case Gateway.Result.KO(var throwable) -> HttpHandlers.of(500, Headers.of(), throwable.getMessage()).handle(exchange);
+        }
+      } catch (InterruptedException | ExecutionException e) {
+        HttpHandlers.of(500, Headers.of(), e.getMessage()).handle(exchange);
+      }
+    }, CONSOLE_LOG);
     httpsServer.setHttpsConfigurator(new HttpsConfigurator(tls) {
       @Override
       public void configure(HttpsParameters params) {
