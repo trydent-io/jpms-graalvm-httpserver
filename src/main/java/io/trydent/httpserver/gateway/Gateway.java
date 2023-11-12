@@ -1,15 +1,12 @@
 package io.trydent.httpserver.gateway;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 enum Threads {
   Pool;
-  final ExecutorService service = Executors.newVirtualThreadPerTaskExecutor();
+  final ExecutorService Service = Executors.newVirtualThreadPerTaskExecutor();
 }
 
 public sealed interface Gateway {
@@ -31,7 +28,7 @@ public sealed interface Gateway {
 
   <ACTION extends Action> Gateway register(Class<? extends ACTION> channel, Function<? super ACTION, ? extends Result> function);
 
-  <ACTION extends Action> Future<Result> send(ACTION action);
+  <ACTION extends Action> Result send(ACTION action);
 
   final class Actions implements Gateway {
     private final Map<Class<? extends Action>, Function<? super Action, ? extends Result>> handlers = new ConcurrentHashMap<>();
@@ -44,8 +41,15 @@ public sealed interface Gateway {
     }
 
     @Override
-    public <ACTION extends Action> Future<Result> send(ACTION action) {;
-      return Threads.Pool.service.submit(() -> handlers.get(action.getClass()).apply(action));
+    public <ACTION extends Action> Result send(ACTION action) {
+      try {
+        return CompletableFuture
+          .supplyAsync(() -> handlers.get(action.getClass()), Threads.Pool.Service)
+          .thenApplyAsync(it -> it.apply(action))
+          .get();
+      } catch (InterruptedException | ExecutionException throwable) {
+        return new Result.KO(throwable);
+      }
     }
   }
 }
